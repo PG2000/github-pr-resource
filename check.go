@@ -9,7 +9,7 @@ import (
 )
 
 // Check (business logic)
-func Check(request CheckRequest, manager Github) (CheckResponse, error) {
+func Check(request CheckRequest, manager AwsCodeCommit) (CheckResponse, error) {
 	var response CheckResponse
 
 	pulls, err := manager.ListOpenPullRequests()
@@ -34,7 +34,7 @@ Loop:
 			continue
 		}
 		// Filter out commits that are too old.
-		if !p.Tip.CommittedDate.Time.After(request.Version.CommittedDate) {
+		if !p.Tip.CommittedDate.After(request.Version.CommittedDate) {
 			continue
 		}
 
@@ -57,11 +57,6 @@ Loop:
 			}
 		}
 
-		// Filter out forks.
-		if request.Source.DisableForks && p.IsCrossRepository {
-			continue
-		}
-
 		// Filter pull request if it does not have the required number of approved review(s).
 		if p.ApprovedReviewCount < request.Source.RequiredReviewApprovals {
 			continue
@@ -71,7 +66,7 @@ Loop:
 		var files []string
 
 		if len(request.Source.Paths) > 0 || len(request.Source.IgnorePaths) > 0 {
-			files, err = manager.ListModifiedFiles(p.Number)
+			files, err = manager.ListModifiedFiles(p.Number,p.Tip.ID, p.BaseRefName)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list modified files: %s", err)
 			}

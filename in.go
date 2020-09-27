@@ -10,7 +10,7 @@ import (
 )
 
 // Get (business logic)
-func Get(request GetRequest, github Github, git Git, outputDir string) (*GetResponse, error) {
+func Get(request GetRequest, github AwsCodeCommit, git Git, outputDir string) (*GetResponse, error) {
 	if request.Params.SkipDownload {
 		return &GetResponse{Version: request.Version}, nil
 	}
@@ -21,7 +21,7 @@ func Get(request GetRequest, github Github, git Git, outputDir string) (*GetResp
 	}
 
 	// Initialize and pull the base for the PR
-	if err := git.Init(pull.BaseRefName); err != nil {
+	if err := git.Init(pull.PullRequestObject.BaseRefName); err != nil {
 		return nil, err
 	}
 	if err := git.Pull(pull.Repository.URL, pull.BaseRefName, request.Params.GitDepth, request.Params.Submodules); err != nil {
@@ -35,21 +35,21 @@ func Get(request GetRequest, github Github, git Git, outputDir string) (*GetResp
 	}
 
 	// Fetch the PR and merge the specified commit into the base
-	if err := git.Fetch(pull.Repository.URL, pull.Number, request.Params.GitDepth, request.Params.Submodules); err != nil {
+	if err := git.Fetch(pull.Repository.URL, pull.HeadRefName, request.Params.GitDepth, request.Params.Submodules); err != nil {
 		return nil, err
 	}
 
 	switch tool := request.Params.IntegrationTool; tool {
-	case "rebase":
-		if err := git.Rebase(pull.BaseRefName, pull.Tip.OID, request.Params.Submodules); err != nil {
+	case "rebase", "":
+		if err := git.Rebase(pull.BaseRefName, pull.Tip.ID, request.Params.Submodules); err != nil {
 			return nil, err
 		}
-	case "merge", "":
-		if err := git.Merge(pull.Tip.OID, request.Params.Submodules); err != nil {
+	case "merge":
+		if err := git.Merge(pull.Tip.ID, request.Params.Submodules); err != nil {
 			return nil, err
 		}
 	case "checkout":
-		if err := git.Checkout(pull.HeadRefName, pull.Tip.OID, request.Params.Submodules); err != nil {
+		if err := git.Checkout(pull.HeadRefName, pull.Tip.ID, request.Params.Submodules); err != nil {
 			return nil, err
 		}
 	default:
@@ -68,12 +68,11 @@ func Get(request GetRequest, github Github, git Git, outputDir string) (*GetResp
 	metadata.Add("title", pull.Title)
 	metadata.Add("url", pull.URL)
 	metadata.Add("head_name", pull.HeadRefName)
-	metadata.Add("head_sha", pull.Tip.OID)
+	metadata.Add("head_sha", pull.Tip.ID)
 	metadata.Add("base_name", pull.BaseRefName)
 	metadata.Add("base_sha", baseSHA)
 	metadata.Add("message", pull.Tip.Message)
-	metadata.Add("author", pull.Tip.Author.User.Login)
-	metadata.Add("author_email", pull.Tip.Author.Email)
+	metadata.Add("author", pull.Tip.Author)
 
 	// Write version and metadata for reuse in PUT
 	path := filepath.Join(outputDir, ".git", "resource")

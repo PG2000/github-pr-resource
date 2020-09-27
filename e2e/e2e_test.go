@@ -177,7 +177,7 @@ func TestCheckE2E(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			githubClient, err := resource.NewGithubClient(&tc.source)
+			githubClient, err := resource.NewAwsCodeCommitClient(&tc.source)
 			require.NoError(t, err)
 
 			input := resource.CheckRequest{Source: tc.source, Version: tc.version}
@@ -210,7 +210,7 @@ func TestCheckAPICostE2E(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			githubClient, err := resource.NewGithubClient(&tc.source)
+			githubClient, err := resource.NewAwsCodeCommitClient(&tc.source)
 			require.NoError(t, err)
 
 			before := getRemainingRateLimit(t, githubClient.V4)
@@ -420,7 +420,7 @@ func TestGetAndPutE2E(t *testing.T) {
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
-			githubClient, err := resource.NewGithubClient(&tc.source)
+			githubClient, err := resource.NewAwsCodeCommitClient(&tc.source)
 			require.NoError(t, err)
 
 			git, err := resource.NewGitClient(&tc.source, dir, ioutil.Discard)
@@ -525,7 +525,7 @@ func TestGetSubmodules(t *testing.T) {
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
-			githubClient, err := resource.NewGithubClient(&tc.source)
+			githubClient, err := resource.NewAwsCodeCommitClient(&tc.source)
 			require.NoError(t, err)
 
 			git, err := resource.NewGitClient(&tc.source, dir, ioutil.Discard)
@@ -619,7 +619,7 @@ func TestPutCommentsE2E(t *testing.T) {
 			require.NoError(t, err)
 			defer os.RemoveAll(dir)
 
-			githubClient, err := resource.NewGithubClient(&tc.source)
+			githubClient, err := resource.NewAwsCodeCommitClient(&tc.source)
 			require.NoError(t, err)
 
 			git, err := resource.NewGitClient(&tc.source, dir, ioutil.Discard)

@@ -163,8 +163,8 @@ func TestPut(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			github := new(fakes.FakeGithub)
-			github.GetPullRequestReturns(tc.pullRequest, nil)
+			codecommit := new(fakes.FakeAwsCodeCommit)
+			codecommit.GetPullRequestReturns(tc.pullRequest, nil)
 
 			git := new(fakes.FakeGit)
 			git.RevParseReturns("sha", nil)
@@ -175,21 +175,21 @@ func TestPut(t *testing.T) {
 			// Run get so we have version and metadata for the put request
 			// (This is tested in in_test.go)
 			getInput := resource.GetRequest{Source: tc.source, Version: tc.version, Params: resource.GetParameters{}}
-			_, err := resource.Get(getInput, github, git, dir)
+			_, err := resource.Get(getInput, codecommit, git, dir)
 			require.NoError(t, err)
 
 			putInput := resource.PutRequest{Source: tc.source, Params: tc.parameters}
-			output, err := resource.Put(putInput, github, dir)
+			output, err := resource.Put(putInput, codecommit, dir)
 
 			// Validate output
 			if assert.NoError(t, err) {
 				assert.Equal(t, tc.version, output.Version)
 			}
 
-			// Validate method calls put on Github.
+			// Validate method calls put on AwsCodeCommit.
 			if tc.parameters.Status != "" {
-				if assert.Equal(t, 1, github.UpdateCommitStatusCallCount()) {
-					commit, baseContext, context, status, targetURL, description := github.UpdateCommitStatusArgsForCall(0)
+				if assert.Equal(t, 1, codecommit.UpdateCommitStatusCallCount()) {
+					commit, baseContext, context, status, targetURL, description := codecommit.UpdateCommitStatusArgsForCall(0)
 					assert.Equal(t, tc.version.Commit, commit)
 					assert.Equal(t, tc.parameters.BaseContext, baseContext)
 					assert.Equal(t, tc.parameters.Context, context)
@@ -200,16 +200,16 @@ func TestPut(t *testing.T) {
 			}
 
 			if tc.parameters.Comment != "" {
-				if assert.Equal(t, 1, github.PostCommentCallCount()) {
-					pr, comment := github.PostCommentArgsForCall(0)
+				if assert.Equal(t, 1, codecommit.PostCommentCallCount()) {
+					pr, comment, _, _ := codecommit.PostCommentArgsForCall(0)
 					assert.Equal(t, tc.version.PR, pr)
 					assert.Equal(t, tc.parameters.Comment, comment)
 				}
 			}
 
 			if tc.parameters.DeletePreviousComments {
-				if assert.Equal(t, 1, github.DeletePreviousCommentsCallCount()) {
-					pr := github.DeletePreviousCommentsArgsForCall(0)
+				if assert.Equal(t, 1, codecommit.DeletePreviousCommentsCallCount()) {
+					pr := codecommit.DeletePreviousCommentsArgsForCall(0)
 					assert.Equal(t, tc.version.PR, pr)
 				}
 			}
@@ -293,8 +293,8 @@ func TestVariableSubstitution(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			github := new(fakes.FakeGithub)
-			github.GetPullRequestReturns(tc.pullRequest, nil)
+			codecommit := new(fakes.FakeAwsCodeCommit)
+			codecommit.GetPullRequestReturns(tc.pullRequest, nil)
 
 			git := new(fakes.FakeGit)
 			git.RevParseReturns("sha", nil)
@@ -304,7 +304,7 @@ func TestVariableSubstitution(t *testing.T) {
 
 			// Run get so we have version and metadata for the put request
 			getInput := resource.GetRequest{Source: tc.source, Version: tc.version, Params: resource.GetParameters{}}
-			_, err := resource.Get(getInput, github, git, dir)
+			_, err := resource.Get(getInput, codecommit, git, dir)
 			require.NoError(t, err)
 
 			oldValue := os.Getenv(variableName)
@@ -313,18 +313,18 @@ func TestVariableSubstitution(t *testing.T) {
 			os.Setenv(variableName, variableValue)
 
 			putInput := resource.PutRequest{Source: tc.source, Params: tc.parameters}
-			_, err = resource.Put(putInput, github, dir)
+			_, err = resource.Put(putInput, codecommit, dir)
 
 			if tc.parameters.TargetURL != "" {
-				if assert.Equal(t, 1, github.UpdateCommitStatusCallCount()) {
-					_, _, _, _, targetURL, _ := github.UpdateCommitStatusArgsForCall(0)
+				if assert.Equal(t, 1, codecommit.UpdateCommitStatusCallCount()) {
+					_, _, _, _, targetURL, _ := codecommit.UpdateCommitStatusArgsForCall(0)
 					assert.Equal(t, tc.expectedTargetURL, targetURL)
 				}
 			}
 
 			if tc.parameters.Comment != "" {
-				if assert.Equal(t, 1, github.PostCommentCallCount()) {
-					_, comment := github.PostCommentArgsForCall(0)
+				if assert.Equal(t, 1, codecommit.PostCommentCallCount()) {
+					_, comment, _, _ := codecommit.PostCommentArgsForCall(0)
 					assert.Equal(t, tc.expectedComment, comment)
 				}
 			}

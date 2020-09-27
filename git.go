@@ -19,7 +19,7 @@ type Git interface {
 	Init(string) error
 	Pull(string, string, int, bool) error
 	RevParse(string) (string, error)
-	Fetch(string, int, int, bool) error
+	Fetch(string, string, int, bool) error
 	Checkout(string, string, bool) error
 	Merge(string, bool) error
 	Rebase(string, string, bool) error
@@ -62,6 +62,11 @@ func (g *GitClient) Init(branch string) error {
 	if err := g.command("git", "init").Run(); err != nil {
 		return fmt.Errorf("init failed: %s", err)
 	}
+
+	if err := g.command("git", "config", "--local", "credential.helper", "!aws codecommit credential-helper $@ --debug").Run(); err != nil {
+		return fmt.Errorf("credential-helper failed: %s", err)
+	}
+
 	if err := g.command("git", "checkout", "-b", branch).Run(); err != nil {
 		return fmt.Errorf("checkout to '%s' failed: %s", branch, err)
 	}
@@ -124,13 +129,13 @@ func (g *GitClient) RevParse(branch string) (string, error) {
 }
 
 // Fetch ...
-func (g *GitClient) Fetch(uri string, prNumber int, depth int, submodules bool) error {
+func (g *GitClient) Fetch(uri string, prNumber string, depth int, submodules bool) error {
 	endpoint, err := g.Endpoint(uri)
 	if err != nil {
 		return err
 	}
 
-	args := []string{"fetch", endpoint, fmt.Sprintf("pull/%s/head", strconv.Itoa(prNumber))}
+	args := []string{"fetch", endpoint, fmt.Sprintf("%s", prNumber)}
 	if depth > 0 {
 		args = append(args, "--depth", strconv.Itoa(depth))
 	}

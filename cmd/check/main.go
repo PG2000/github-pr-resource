@@ -2,10 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/telia-oss/github-pr-resource"
 	"log"
 	"os"
-
-	"github.com/telia-oss/github-pr-resource"
 )
 
 func main() {
@@ -21,7 +20,7 @@ func main() {
 	if err := request.Source.Validate(); err != nil {
 		log.Fatalf("invalid source configuration: %s", err)
 	}
-	github, err := resource.NewGithubClient(&request.Source)
+	github, err := resource.NewAwsCodeCommitClient(&request.Source)
 	if err != nil {
 		log.Fatalf("failed to create github manager: %s", err)
 	}

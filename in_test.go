@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/shurcooL/githubv4"
 	"github.com/stretchr/testify/assert"
 	resource "github.com/telia-oss/github-pr-resource"
 	"github.com/telia-oss/github-pr-resource/fakes"
@@ -42,7 +41,7 @@ func TestGet(t *testing.T) {
 			parameters:     resource.GetParameters{},
 			pullRequest:    createTestPR(1, "master", false, false, 0, nil),
 			versionString:  `{"pr":"pr1","commit":"commit1","committed":"0001-01-01T00:00:00Z"}`,
-			metadataString: `[{"name":"pr","value":"1"},{"name":"title","value":"pr1 title"},{"name":"url","value":"pr1 url"},{"name":"head_name","value":"pr1"},{"name":"head_sha","value":"oid1"},{"name":"base_name","value":"master"},{"name":"base_sha","value":"sha"},{"name":"message","value":"commit message1"},{"name":"author","value":"login1"},{"name":"author_email","value":"user@example.com"}]`,
+			metadataString: `[{"name":"pr","value":"1"},{"name":"title","value":"pr1 title"},{"name":"url","value":"pr1 url"},{"name":"head_name","value":"pr1"},{"name":"head_sha","value":"oid1"},{"name":"base_name","value":"master"},{"name":"base_sha","value":"sha"},{"name":"message","value":"commit message1"},{"name":"author","value":"login1"}]`,
 		},
 		{
 			description: "get supports unlocking with git crypt",
@@ -146,7 +145,7 @@ func TestGet(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			github := new(fakes.FakeGithub)
+			github := new(fakes.FakeAwsCodeCommit)
 			github.GetPullRequestReturns(tc.pullRequest, nil)
 
 			if tc.files != nil {
@@ -183,7 +182,6 @@ func TestGet(t *testing.T) {
 					"base_sha":     "sha",
 					"message":      "commit message1",
 					"author":       "login1",
-					"author_email": "user@example.com",
 					"title":        "pr1 title",
 				}
 
@@ -198,7 +196,7 @@ func TestGet(t *testing.T) {
 				}
 			}
 
-			// Validate Github calls
+			// Validate AwsCodeCommit calls
 			if assert.Equal(t, 1, github.GetPullRequestCallCount()) {
 				pr, commit := github.GetPullRequestArgsForCall(0)
 				assert.Equal(t, tc.version.PR, pr)
@@ -237,20 +235,20 @@ func TestGet(t *testing.T) {
 				if assert.Equal(t, 1, git.RebaseCallCount()) {
 					branch, tip, submodules := git.RebaseArgsForCall(0)
 					assert.Equal(t, tc.pullRequest.BaseRefName, branch)
-					assert.Equal(t, tc.pullRequest.Tip.OID, tip)
+					assert.Equal(t, tc.pullRequest.Tip.ID, tip)
 					assert.Equal(t, tc.parameters.Submodules, submodules)
 				}
 			case "checkout":
 				if assert.Equal(t, 1, git.CheckoutCallCount()) {
 					branch, sha, submodules := git.CheckoutArgsForCall(0)
 					assert.Equal(t, tc.pullRequest.HeadRefName, branch)
-					assert.Equal(t, tc.pullRequest.Tip.OID, sha)
+					assert.Equal(t, tc.pullRequest.Tip.ID, sha)
 					assert.Equal(t, tc.parameters.Submodules, submodules)
 				}
 			default:
 				if assert.Equal(t, 1, git.MergeCallCount()) {
 					tip, submodules := git.MergeArgsForCall(0)
-					assert.Equal(t, tc.pullRequest.Tip.OID, tip)
+					assert.Equal(t, tc.pullRequest.Tip.ID, tip)
 					assert.Equal(t, tc.parameters.Submodules, submodules)
 				}
 			}
@@ -289,7 +287,7 @@ func TestGetSkipDownload(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			github := new(fakes.FakeGithub)
+			github := new(fakes.FakeAwsCodeCommit)
 			git := new(fakes.FakeGit)
 			dir := createTestDirectory(t)
 			defer os.RemoveAll(dir)
@@ -341,22 +339,12 @@ func createTestPR(
 			Repository: struct{ URL string }{
 				URL: fmt.Sprintf("repo%s url", n),
 			},
-			IsCrossRepository: isCrossRepo,
 		},
 		Tip: resource.CommitObject{
 			ID:            fmt.Sprintf("commit%s", n),
-			OID:           fmt.Sprintf("oid%s", n),
-			CommittedDate: githubv4.DateTime{Time: d},
+			CommittedDate: &d,
 			Message:       m,
-			Author: struct {
-				User  struct{ Login string }
-				Email string
-			}{
-				User: struct{ Login string }{
-					Login: fmt.Sprintf("login%s", n),
-				},
-				Email: "user@example.com",
-			},
+			Author:        fmt.Sprintf("login%s", n),
 		},
 		ApprovedReviewCount: approvedCount,
 		Labels:              labelObjects,

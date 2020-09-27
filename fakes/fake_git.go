@@ -21,11 +21,11 @@ type FakeGit struct {
 	checkoutReturnsOnCall map[int]struct {
 		result1 error
 	}
-	FetchStub        func(string, int, int, bool) error
+	FetchStub        func(string, string, int, bool) error
 	fetchMutex       sync.RWMutex
 	fetchArgsForCall []struct {
 		arg1 string
-		arg2 int
+		arg2 string
 		arg3 int
 		arg4 bool
 	}
@@ -175,12 +175,12 @@ func (fake *FakeGit) CheckoutReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeGit) Fetch(arg1 string, arg2 int, arg3 int, arg4 bool) error {
+func (fake *FakeGit) Fetch(arg1 string, arg2 string, arg3 int, arg4 bool) error {
 	fake.fetchMutex.Lock()
 	ret, specificReturn := fake.fetchReturnsOnCall[len(fake.fetchArgsForCall)]
 	fake.fetchArgsForCall = append(fake.fetchArgsForCall, struct {
 		arg1 string
-		arg2 int
+		arg2 string
 		arg3 int
 		arg4 bool
 	}{arg1, arg2, arg3, arg4})
@@ -202,13 +202,13 @@ func (fake *FakeGit) FetchCallCount() int {
 	return len(fake.fetchArgsForCall)
 }
 
-func (fake *FakeGit) FetchCalls(stub func(string, int, int, bool) error) {
+func (fake *FakeGit) FetchCalls(stub func(string, string, int, bool) error) {
 	fake.fetchMutex.Lock()
 	defer fake.fetchMutex.Unlock()
 	fake.FetchStub = stub
 }
 
-func (fake *FakeGit) FetchArgsForCall(i int) (string, int, int, bool) {
+func (fake *FakeGit) FetchArgsForCall(i int) (string, string, int, bool) {
 	fake.fetchMutex.RLock()
 	defer fake.fetchMutex.RUnlock()
 	argsForCall := fake.fetchArgsForCall[i]

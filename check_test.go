@@ -189,7 +189,7 @@ func TestCheck(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			github := new(fakes.FakeGithub)
+			github := new(fakes.FakeAwsCodeCommit)
 			github.ListOpenPullRequestsReturns(tc.pullRequests, nil)
 
 			for i, file := range tc.files {

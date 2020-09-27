@@ -4,8 +4,6 @@ import (
 	"errors"
 	"strconv"
 	"time"
-
-	"github.com/shurcooL/githubv4"
 )
 
 // Source represents the configuration for the resource.
@@ -32,12 +30,6 @@ func (s *Source) Validate() error {
 	}
 	if s.Repository == "" {
 		return errors.New("repository must be set")
-	}
-	if s.V3Endpoint != "" && s.V4Endpoint == "" {
-		return errors.New("v4_endpoint must be set together with v3_endpoint")
-	}
-	if s.V4Endpoint != "" && s.V3Endpoint == "" {
-		return errors.New("v3_endpoint must be set together with v4_endpoint")
 	}
 	return nil
 }
@@ -67,8 +59,8 @@ type Version struct {
 func NewVersion(p *PullRequest) Version {
 	return Version{
 		PR:            strconv.Itoa(p.Number),
-		Commit:        p.Tip.OID,
-		CommittedDate: p.Tip.CommittedDate.Time,
+		Commit:        p.Tip.ID,
+		CommittedDate: *p.Tip.CommittedDate,
 	}
 }
 
@@ -92,22 +84,15 @@ type PullRequestObject struct {
 	Repository  struct {
 		URL string
 	}
-	IsCrossRepository bool
 }
 
 // CommitObject represents the GraphQL commit node.
 // https://developer.github.com/v4/object/commit/
 type CommitObject struct {
 	ID            string
-	OID           string
-	CommittedDate githubv4.DateTime
+	CommittedDate *time.Time
 	Message       string
-	Author        struct {
-		User struct {
-			Login string
-		}
-		Email string
-	}
+	Author        string
 }
 
 // ChangedFileObject represents the GraphQL FilesChanged node.

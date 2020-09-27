@@ -10,7 +10,7 @@ import (
 )
 
 // Put (business logic)
-func Put(request PutRequest, manager Github, inputDir string) (*PutResponse, error) {
+func Put(request PutRequest, manager AwsCodeCommit, inputDir string) (*PutResponse, error) {
 	if err := request.Params.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid parameters: %s", err)
 	}
@@ -35,6 +35,15 @@ func Put(request PutRequest, manager Github, inputDir string) (*PutResponse, err
 	if err := json.Unmarshal(content, &metadata); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal metadata from file: %s", err)
 	}
+
+	// Version available after a GET step.
+	var afterCommitId string
+	content, err = ioutil.ReadFile(filepath.Join(path, "base_sha"))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read version from path: %s", err)
+	}
+
+	afterCommitId = string(content)
 
 	// Set status if specified
 	if p := request.Params; p.Status != "" {
@@ -64,7 +73,7 @@ func Put(request PutRequest, manager Github, inputDir string) (*PutResponse, err
 
 	// Set comment if specified
 	if p := request.Params; p.Comment != "" {
-		err = manager.PostComment(version.PR, safeExpandEnv(p.Comment))
+		err = manager.PostComment(version.PR, version.Commit, afterCommitId, safeExpandEnv(p.Comment))
 		if err != nil {
 			return nil, fmt.Errorf("failed to post comment: %s", err)
 		}
@@ -78,7 +87,7 @@ func Put(request PutRequest, manager Github, inputDir string) (*PutResponse, err
 		}
 		comment := string(content)
 		if comment != "" {
-			err = manager.PostComment(version.PR, safeExpandEnv(comment))
+			err = manager.PostComment(version.PR, version.Commit, afterCommitId, safeExpandEnv(comment))
 			if err != nil {
 				return nil, fmt.Errorf("failed to post comment: %s", err)
 			}

@@ -2,10 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/telia-oss/github-pr-resource"
 	"log"
 	"os"
-
-	"github.com/telia-oss/github-pr-resource"
 )
 
 func main() {
@@ -15,17 +14,20 @@ func main() {
 	decoder.DisallowUnknownFields()
 
 	if err := decoder.Decode(&request); err != nil {
-		log.Fatalf("failed to unmarshal request: %s", err)
+		log.Fatalf("failed to unmarshal request: %s for request", err)
 	}
 
 	if len(os.Args) < 2 {
 		log.Fatalf("missing arguments")
 	}
+
 	sourceDir := os.Args[1]
+
 	if err := request.Source.Validate(); err != nil {
 		log.Fatalf("invalid source configuration: %s", err)
 	}
-	github, err := resource.NewGithubClient(&request.Source)
+
+	github, err := resource.NewAwsCodeCommitClient(&request.Source)
 	if err != nil {
 		log.Fatalf("failed to create github manager: %s", err)
 	}
