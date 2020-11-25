@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/telia-oss/github-pr-resource"
+	"github.com/pg2000/codecommit-pr-resource"
 	"log"
 	"os"
 )
@@ -20,11 +20,13 @@ func main() {
 	if err := request.Source.Validate(); err != nil {
 		log.Fatalf("invalid source configuration: %s", err)
 	}
-	github, err := resource.NewAwsCodeCommitClient(&request.Source)
+
+	codeCommitClient, err := resource.NewAwsCodeCommitClient(&request.Source)
 	if err != nil {
-		log.Fatalf("failed to create github manager: %s", err)
+		log.Fatalf("failed to create codeCommitClient manager: %s", err)
 	}
-	response, err := resource.Check(request, github)
+
+	response, err := resource.Check(request, codeCommitClient)
 	if err != nil {
 		log.Fatalf("check failed: %s", err)
 	}

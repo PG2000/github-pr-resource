@@ -3,22 +3,22 @@ package resource_test
 import (
 	"testing"
 
+	resource "github.com/pg2000/codecommit-pr-resource"
+	"github.com/pg2000/codecommit-pr-resource/fakes"
 	"github.com/stretchr/testify/assert"
-	resource "github.com/telia-oss/github-pr-resource"
-	"github.com/telia-oss/github-pr-resource/fakes"
 )
 
 var (
 	testPullRequests = []*resource.PullRequest{
-		createTestPR(1, "master", true, false, 0, nil),
-		createTestPR(2, "master", false, false, 0, nil),
-		createTestPR(3, "master", false, false, 0, nil),
-		createTestPR(4, "master", false, false, 0, nil),
-		createTestPR(5, "master", false, true, 0, nil),
-		createTestPR(6, "master", false, false, 0, nil),
-		createTestPR(7, "develop", false, false, 0, []string{"enhancement"}),
-		createTestPR(8, "master", false, false, 1, []string{"wontfix"}),
-		createTestPR(9, "master", false, false, 0, nil),
+		createTestPR(1, "master", true, nil),
+		createTestPR(2, "master", false, nil),
+		createTestPR(3, "master", false, nil),
+		createTestPR(4, "master", false, nil),
+		createTestPR(5, "master", false, nil),
+		createTestPR(6, "master", false, nil),
+		createTestPR(7, "develop", false, []string{"enhancement"}),
+		createTestPR(8, "master", false, []string{"wontfix"}),
+		createTestPR(9, "master", false, nil),
 	}
 )
 
@@ -34,8 +34,7 @@ func TestCheck(t *testing.T) {
 		{
 			description: "check returns the latest version if there is no previous",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version:      resource.Version{},
 			pullRequests: testPullRequests,
@@ -48,8 +47,7 @@ func TestCheck(t *testing.T) {
 		{
 			description: "check returns the previous version when its still latest",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version:      resource.NewVersion(testPullRequests[1]),
 			pullRequests: testPullRequests,
@@ -62,8 +60,7 @@ func TestCheck(t *testing.T) {
 		{
 			description: "check returns all new versions since the last",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version:      resource.NewVersion(testPullRequests[3]),
 			pullRequests: testPullRequests,
@@ -77,9 +74,8 @@ func TestCheck(t *testing.T) {
 		{
 			description: "check will only return versions that match the specified paths",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
-				Paths:       []string{"terraform/*/*.tf", "terraform/*/*/*.tf"},
+				Repository: "codecommit::eu-central-1://test-repository",
+				Paths:      []string{"terraform/*/*.tf", "terraform/*/*/*.tf"},
 			},
 			version:      resource.NewVersion(testPullRequests[3]),
 			pullRequests: testPullRequests,
@@ -96,8 +92,7 @@ func TestCheck(t *testing.T) {
 		{
 			description: "check will skip versions which only match the ignore paths",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository:  "codecommit::eu-central-1://test-repository",
 				IgnorePaths: []string{"*.md", "*.yml"},
 			},
 			version:      resource.NewVersion(testPullRequests[3]),
@@ -115,8 +110,7 @@ func TestCheck(t *testing.T) {
 		{
 			description: "check correctly ignores [skip ci] when specified",
 			source: resource.Source{
-				Repository:    "itsdalmo/test-repository",
-				AccessToken:   "oauthtoken",
+				Repository:    "codecommit::eu-central-1://test-repository",
 				DisableCISkip: true,
 			},
 			version:      resource.NewVersion(testPullRequests[1]),
@@ -127,27 +121,10 @@ func TestCheck(t *testing.T) {
 		},
 
 		{
-			description: "check correctly ignores cross repo pull requests",
-			source: resource.Source{
-				Repository:   "itsdalmo/test-repository",
-				AccessToken:  "oauthtoken",
-				DisableForks: true,
-			},
-			version:      resource.NewVersion(testPullRequests[5]),
-			pullRequests: testPullRequests,
-			expected: resource.CheckResponse{
-				resource.NewVersion(testPullRequests[3]),
-				resource.NewVersion(testPullRequests[2]),
-				resource.NewVersion(testPullRequests[1]),
-			},
-		},
-
-		{
 			description: "check supports specifying base branch",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
-				BaseBranch:  "develop",
+				Repository: "codecommit::eu-central-1://test-repository",
+				BaseBranch: "develop",
 			},
 			version:      resource.Version{},
 			pullRequests: testPullRequests,
@@ -158,25 +135,10 @@ func TestCheck(t *testing.T) {
 		},
 
 		{
-			description: "check correctly ignores PRs with no approved reviews when specified",
-			source: resource.Source{
-				Repository:              "itsdalmo/test-repository",
-				AccessToken:             "oauthtoken",
-				RequiredReviewApprovals: 1,
-			},
-			version:      resource.NewVersion(testPullRequests[8]),
-			pullRequests: testPullRequests,
-			expected: resource.CheckResponse{
-				resource.NewVersion(testPullRequests[7]),
-			},
-		},
-
-		{
 			description: "check returns latest version from a PR with at least one of the desired labels on it",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
-				Labels:      []string{"enhancement"},
+				Repository: "codecommit::eu-central-1://test-repository",
+				Labels:     []string{"enhancement"},
 			},
 			version:      resource.Version{},
 			pullRequests: testPullRequests,
@@ -189,20 +151,20 @@ func TestCheck(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.description, func(t *testing.T) {
-			github := new(fakes.FakeAwsCodeCommit)
-			github.ListOpenPullRequestsReturns(tc.pullRequests, nil)
+			codecommit := new(fakes.FakeAwsCodeCommit)
+			codecommit.ListOpenPullRequestsReturns(tc.pullRequests, nil)
 
 			for i, file := range tc.files {
-				github.ListModifiedFilesReturnsOnCall(i, file, nil)
+				codecommit.ListModifiedFilesReturnsOnCall(i, file, nil)
 			}
 
 			input := resource.CheckRequest{Source: tc.source, Version: tc.version}
-			output, err := resource.Check(input, github)
+			output, err := resource.Check(input, codecommit)
 
 			if assert.NoError(t, err) {
 				assert.Equal(t, tc.expected, output)
 			}
-			assert.Equal(t, 1, github.ListOpenPullRequestsCallCount())
+			assert.Equal(t, 1, codecommit.ListOpenPullRequestsCallCount())
 		})
 	}
 }

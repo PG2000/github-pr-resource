@@ -113,6 +113,7 @@ type PutResponse struct {
 }
 
 // PutParameters for the resource.
+
 type PutParameters struct {
 	Path                   string `json:"path"`
 	BaseContext            string `json:"base_context"`

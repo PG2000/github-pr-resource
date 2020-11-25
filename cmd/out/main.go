@@ -2,7 +2,7 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/telia-oss/github-pr-resource"
+	"github.com/pg2000/codecommit-pr-resource"
 	"log"
 	"os"
 )

@@ -2,6 +2,7 @@ FROM golang:1.15 as builder
 ADD . /go/src/github.com/pg2000/codecommit-pr-resource
 WORKDIR /go/src/github.com/pg2000/codecommit-pr-resource
 RUN curl -sL https://taskfile.dev/install.sh | sh
+RUN ./bin/task test
 RUN ./bin/task build
 
 FROM alpine:3.12 as resource

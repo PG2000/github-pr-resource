@@ -28,11 +28,7 @@ type Git interface {
 
 // NewGitClient ...
 func NewGitClient(source *Source, dir string, output io.Writer) (*GitClient, error) {
-	if source.SkipSSLVerification {
-		os.Setenv("GIT_SSL_NO_VERIFY", "true")
-	}
 	return &GitClient{
-		AccessToken: source.AccessToken,
 		Directory:   dir,
 		Output:      output,
 	}, nil

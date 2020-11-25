@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/telia-oss/github-pr-resource"
+	"github.com/pg2000/codecommit-pr-resource"
 )
 
 func main() {
@@ -17,6 +17,8 @@ func main() {
 	if err := decoder.Decode(&request); err != nil {
 		log.Fatalf("failed to unmarshal request: %s", err)
 	}
+
+	log.Printf("%v", &request)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("missing arguments")

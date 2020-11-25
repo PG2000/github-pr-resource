@@ -36,37 +36,31 @@ type AwsCodeCommitClient struct {
 // NewAwsCodeCommitClient ...
 func NewAwsCodeCommitClient(s *Source) (*AwsCodeCommitClient, error) {
 
-	//TODO: remove set env. get from repo name
-	err := os.Setenv("AWS_REGION", "eu-central-1")
+	region, repository, err := parseRepository(s.Repository)
+
+	os.Setenv("AWS_REGION", region)
 
 	if err != nil {
-		fmt.Println(err)
+		return nil, err
 	}
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState: session.SharedConfigEnable,
 	}))
 
-	//TODO: remove
-	getenv := os.Getenv("AWS_REGION")
-	sess.Config.Region = aws.String(getenv)
-
 	client := codecommit.New(sess)
 
 	return &AwsCodeCommitClient{
 		Sts:        sts.New(sess),
 		CodeCommit: client,
-		Owner:      "",
-		Repository: s.Repository,
+		Repository: repository,
 	}, nil
 }
 
 // ListOpenPullRequests gets the last commit on all open pull requests.
 func (m *AwsCodeCommitClient) ListOpenPullRequests() ([]*PullRequest, error) {
-
 	var newPullRequests []*PullRequest
 
-	m.CodeCommit.Config.Region = aws.String("eu-central-1")
 	repository, err := m.CodeCommit.GetRepository(&codecommit.GetRepositoryInput{
 		RepositoryName: aws.String(m.Repository),
 	})
@@ -108,7 +102,7 @@ func (m *AwsCodeCommitClient) ListOpenPullRequests() ([]*PullRequest, error) {
 				ID:          *id,
 				Number:      pullRequestIdAsInt,
 				Title:       *pullRequest.PullRequest.Title,
-				URL:         "TO BE Implemented",
+				URL:         *repository.RepositoryMetadata.CloneUrlHttp,
 				BaseRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].DestinationReference),
 				HeadRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].SourceReference),
 				Repository: struct{ URL string }{
@@ -208,7 +202,7 @@ func (m *AwsCodeCommitClient) GetPullRequest(prNumber, commitRef string) (*PullR
 				ID:          prNumber,
 				Number:      pullRequestIdAsInt,
 				Title:       *pullRequest.PullRequest.Title,
-				URL:         "TO BE Implemented",
+				URL:         fmt.Sprintf("https://eu-central-1.console.aws.amazon.com/codesuite/codecommit/repositories/%s/pull-requests/%s", m.Repository, prNumber),
 				BaseRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].DestinationReference),
 				HeadRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].SourceReference),
 				Repository: struct{ URL string }{
@@ -220,13 +214,11 @@ func (m *AwsCodeCommitClient) GetPullRequest(prNumber, commitRef string) (*PullR
 				ID:            *pullRequest.PullRequest.PullRequestTargets[0].SourceCommit,
 				CommittedDate: pullRequest.PullRequest.CreationDate,
 				Author:        *pullRequest.PullRequest.AuthorArn,
-				Message:       *pullRequest.PullRequest.Description,
+				Message:       extractDescription(pullRequest),
 			},
 		}, nil
 	}
 
-	// Return an error if the commit was not found
-	return nil, fmt.Errorf("commit with ref '%s' does not exist", commitRef)
 }
 
 // UpdateCommitStatus for a given commit (not supported by V4 API).
@@ -269,12 +261,12 @@ func (m *AwsCodeCommitClient) DeletePreviousComments(prNumber string) error {
 
 		for _, datum := range request.CommentsForPullRequestData {
 			for _, comment := range datum.Comments {
-				if *comment.AuthorArn == *identity.Arn {
+				if *comment.AuthorArn == *identity.Arn && *comment.Deleted == false {
 					input := codecommit.DeleteCommentContentInput{
 						CommentId: comment.CommentId,
 					}
-					_, err := m.CodeCommit.DeleteCommentContent(&input)
 
+					_, err := m.CodeCommit.DeleteCommentContent(&input)
 					return err
 
 				}
@@ -286,9 +278,23 @@ func (m *AwsCodeCommitClient) DeletePreviousComments(prNumber string) error {
 }
 
 func parseRepository(s string) (string, string, error) {
-	parts := strings.Split(s, "/")
-	if len(parts) != 2 {
-		return "", "", errors.New("malformed repository")
+	if strings.Contains(s, "codecommit::") {
+		s = strings.Replace(s, "codecommit::", "", -1)
 	}
+	parts := strings.Split(s, ":")
+	if len(parts) != 2 {
+		return "", "", errors.New("malformed repository. A URL must be in the following format: codecommit::<region>://<repository>")
+	}
+
+	parts[1] = strings.Replace(parts[1], "//", "", -1)
+
 	return parts[0], parts[1], nil
+}
+
+func extractDescription(pullRequest *codecommit.GetPullRequestOutput) string {
+	if pullRequest.PullRequest.Description != nil {
+		return *pullRequest.PullRequest.Description
+	} else {
+		return ""
+	}
 }

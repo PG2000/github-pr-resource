@@ -10,12 +10,12 @@ import (
 )
 
 // Get (business logic)
-func Get(request GetRequest, github AwsCodeCommit, git Git, outputDir string) (*GetResponse, error) {
+func Get(request GetRequest, codeCommit AwsCodeCommit, git Git, outputDir string) (*GetResponse, error) {
 	if request.Params.SkipDownload {
 		return &GetResponse{Version: request.Version}, nil
 	}
 
-	pull, err := github.GetPullRequest(request.Version.PR, request.Version.Commit)
+	pull, err := codeCommit.GetPullRequest(request.Version.PR, request.Version.Commit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve pull request: %s", err)
 	}
@@ -40,11 +40,11 @@ func Get(request GetRequest, github AwsCodeCommit, git Git, outputDir string) (*
 	}
 
 	switch tool := request.Params.IntegrationTool; tool {
-	case "rebase", "":
+	case "rebase":
 		if err := git.Rebase(pull.BaseRefName, pull.Tip.ID, request.Params.Submodules); err != nil {
 			return nil, err
 		}
-	case "merge":
+	case "merge", "":
 		if err := git.Merge(pull.Tip.ID, request.Params.Submodules); err != nil {
 			return nil, err
 		}
@@ -104,7 +104,7 @@ func Get(request GetRequest, github AwsCodeCommit, git Git, outputDir string) (*
 	}
 
 	if request.Params.ListChangedFiles {
-		cfol, err := github.GetChangedFiles(request.Version.PR, request.Version.Commit)
+		cfol, err := codeCommit.GetChangedFiles(request.Version.PR, request.Version.Commit)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch list of changed files: %s", err)
 		}

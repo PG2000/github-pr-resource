@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	resource "github.com/telia-oss/github-pr-resource"
-	"github.com/telia-oss/github-pr-resource/fakes"
+	resource "github.com/pg2000/codecommit-pr-resource"
+	"github.com/pg2000/codecommit-pr-resource/fakes"
 )
 
 func TestPut(t *testing.T) {
@@ -24,8 +24,7 @@ func TestPut(t *testing.T) {
 		{
 			description: "put with no parameters does nothing",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -33,14 +32,13 @@ func TestPut(t *testing.T) {
 				CommittedDate: time.Time{},
 			},
 			parameters:  resource.PutParameters{},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can set status on a commit",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -50,14 +48,13 @@ func TestPut(t *testing.T) {
 			parameters: resource.PutParameters{
 				Status: "success",
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can provide a custom context for the status",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -68,14 +65,13 @@ func TestPut(t *testing.T) {
 				Status:  "failure",
 				Context: "build",
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can provide a custom base context for the status",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -87,14 +83,13 @@ func TestPut(t *testing.T) {
 				BaseContext: "concourse-ci-custom",
 				Context:     "build",
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can provide a custom target url for the status",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -105,14 +100,13 @@ func TestPut(t *testing.T) {
 				Status:    "failure",
 				TargetURL: "https://targeturl.com/concourse",
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can provide a custom description for the status",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -123,14 +117,13 @@ func TestPut(t *testing.T) {
 				Status:      "failure",
 				Description: "Concourse CI build",
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can comment on the pull request",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -140,14 +133,13 @@ func TestPut(t *testing.T) {
 			parameters: resource.PutParameters{
 				Comment: "comment",
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, nil),
+			pullRequest: createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can delete previous comments made on the pull request",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -157,7 +149,7 @@ func TestPut(t *testing.T) {
 			parameters: resource.PutParameters{
 				DeletePreviousComments: true,
 			},
-			pullRequest: createTestPR(1, "master", false, false, 0, []string{}),
+			pullRequest: createTestPR(1, "master", false, []string{}),
 		},
 	}
 
@@ -201,7 +193,7 @@ func TestPut(t *testing.T) {
 
 			if tc.parameters.Comment != "" {
 				if assert.Equal(t, 1, codecommit.PostCommentCallCount()) {
-					pr, comment, _, _ := codecommit.PostCommentArgsForCall(0)
+					pr, _, _, comment := codecommit.PostCommentArgsForCall(0)
 					assert.Equal(t, tc.version.PR, pr)
 					assert.Equal(t, tc.parameters.Comment, comment)
 				}
@@ -238,8 +230,7 @@ func TestVariableSubstitution(t *testing.T) {
 		{
 			description: "we can substitute environment variables for Comment",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -250,14 +241,13 @@ func TestVariableSubstitution(t *testing.T) {
 				Comment: fmt.Sprintf("$%s", variableName),
 			},
 			expectedComment: variableValue,
-			pullRequest:     createTestPR(1, "master", false, false, 0, nil),
+			pullRequest:     createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we can substitute environment variables for TargetURL",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -269,14 +259,13 @@ func TestVariableSubstitution(t *testing.T) {
 				TargetURL: fmt.Sprintf("%s$%s", variableURL, variableName),
 			},
 			expectedTargetURL: fmt.Sprintf("%s%s", variableURL, variableValue),
-			pullRequest:       createTestPR(1, "master", false, false, 0, nil),
+			pullRequest:       createTestPR(1, "master", false, nil),
 		},
 
 		{
 			description: "we do not substitute variables other then concourse build metadata",
 			source: resource.Source{
-				Repository:  "itsdalmo/test-repository",
-				AccessToken: "oauthtoken",
+				Repository: "codecommit::eu-central-1://test-repository",
 			},
 			version: resource.Version{
 				PR:            "pr1",
@@ -287,7 +276,7 @@ func TestVariableSubstitution(t *testing.T) {
 				Comment: "$THIS_IS_NOT_SUBSTITUTED",
 			},
 			expectedComment: "$THIS_IS_NOT_SUBSTITUTED",
-			pullRequest:     createTestPR(1, "master", false, false, 0, nil),
+			pullRequest:     createTestPR(1, "master", false, nil),
 		},
 	}
 
@@ -324,7 +313,7 @@ func TestVariableSubstitution(t *testing.T) {
 
 			if tc.parameters.Comment != "" {
 				if assert.Equal(t, 1, codecommit.PostCommentCallCount()) {
-					_, comment, _, _ := codecommit.PostCommentArgsForCall(0)
+					_, _, _, comment := codecommit.PostCommentArgsForCall(0)
 					assert.Equal(t, tc.expectedComment, comment)
 				}
 			}

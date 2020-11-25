@@ -13,6 +13,7 @@ func Check(request CheckRequest, manager AwsCodeCommit) (CheckResponse, error) {
 	var response CheckResponse
 
 	pulls, err := manager.ListOpenPullRequests()
+	
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last commits: %s", err)
 	}
@@ -55,11 +56,6 @@ Loop:
 			if !labelFound {
 				continue Loop
 			}
-		}
-
-		// Filter pull request if it does not have the required number of approved review(s).
-		if p.ApprovedReviewCount < request.Source.RequiredReviewApprovals {
-			continue
 		}
 
 		// Fetch files once if paths/ignore_paths are specified.
