@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	resource "github.com/pg2000/codecommit-pr-resource"
 	"github.com/pg2000/codecommit-pr-resource/fakes"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPut(t *testing.T) {

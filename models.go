@@ -8,13 +8,13 @@ import (
 
 // Source represents the configuration for the resource.
 type Source struct {
-	Repository              string   `json:"repository"`
-	Paths                   []string `json:"paths"`
-	IgnorePaths             []string `json:"ignore_paths"`
-	DisableCISkip           bool     `json:"disable_ci_skip"`
-	GitCryptKey             string   `json:"git_crypt_key"`
-	BaseBranch              string   `json:"base_branch"`
-	Labels                  []string `json:"labels"`
+	Repository    string   `json:"repository"`
+	Paths         []string `json:"paths"`
+	IgnorePaths   []string `json:"ignore_paths"`
+	DisableCISkip bool     `json:"disable_ci_skip"`
+	GitCryptKey   string   `json:"git_crypt_key"`
+	BaseBranch    string   `json:"base_branch"`
+	Labels        []string `json:"labels"`
 }
 
 // Validate the source configuration.
@@ -67,7 +67,6 @@ type PullRequest struct {
 // PullRequestObject represents the GraphQL commit node.
 // https://developer.github.com/v4/object/pullrequest/
 type PullRequestObject struct {
-	ID          string
 	Number      int
 	Title       string
 	URL         string

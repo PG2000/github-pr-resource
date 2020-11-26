@@ -13,7 +13,7 @@ func Check(request CheckRequest, manager AwsCodeCommit) (CheckResponse, error) {
 	var response CheckResponse
 
 	pulls, err := manager.ListOpenPullRequests()
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get last commits: %s", err)
 	}
@@ -62,7 +62,7 @@ Loop:
 		var files []string
 
 		if len(request.Source.Paths) > 0 || len(request.Source.IgnorePaths) > 0 {
-			files, err = manager.ListModifiedFiles(p.Number,p.Tip.ID, p.BaseRefName)
+			files, err = manager.ListModifiedFiles(p.Number, p.Tip.ID, p.BaseRefName)
 			if err != nil {
 				return nil, fmt.Errorf("failed to list modified files: %s", err)
 			}

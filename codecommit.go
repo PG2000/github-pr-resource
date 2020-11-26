@@ -27,16 +27,17 @@ type AwsCodeCommit interface {
 
 // AwsCodeCommitClient for handling requests to the AwsCodeCommit API.
 type AwsCodeCommitClient struct {
-	Repository string
-	Owner      string
 	CodeCommit *codecommit.CodeCommit
+	Owner      string
+	Region     string
+	Repository string
 	Sts        *sts.STS
 }
 
 // NewAwsCodeCommitClient ...
 func NewAwsCodeCommitClient(s *Source) (*AwsCodeCommitClient, error) {
 
-	region, repository, err := parseRepository(s.Repository)
+	region, repository, err := ParseRepository(s.Repository)
 
 	os.Setenv("AWS_REGION", region)
 
@@ -51,9 +52,10 @@ func NewAwsCodeCommitClient(s *Source) (*AwsCodeCommitClient, error) {
 	client := codecommit.New(sess)
 
 	return &AwsCodeCommitClient{
-		Sts:        sts.New(sess),
 		CodeCommit: client,
+		Region:     region,
 		Repository: repository,
+		Sts:        sts.New(sess),
 	}, nil
 }
 
@@ -92,19 +94,18 @@ func (m *AwsCodeCommitClient) ListOpenPullRequests() ([]*PullRequest, error) {
 			return nil, fmt.Errorf("failed to get get pull request with id %s: %s", *id, err)
 		}
 
-		pullRequestIdAsInt, err := strconv.Atoi(*id)
+		prNumber, err := strconv.Atoi(*id)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert pull request id: '%s' to int: %s", *id, err)
 		}
 		newPullRequests = append(newPullRequests, &PullRequest{
 			PullRequestObject: PullRequestObject{
-				ID:          *id,
-				Number:      pullRequestIdAsInt,
+				Number:      prNumber,
 				Title:       *pullRequest.PullRequest.Title,
 				URL:         *repository.RepositoryMetadata.CloneUrlHttp,
-				BaseRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].DestinationReference),
-				HeadRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].SourceReference),
+				BaseRefName: GetSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].DestinationReference),
+				HeadRefName: GetSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].SourceReference),
 				Repository: struct{ URL string }{
 					URL: *repository.RepositoryMetadata.CloneUrlHttp,
 				},
@@ -119,10 +120,6 @@ func (m *AwsCodeCommitClient) ListOpenPullRequests() ([]*PullRequest, error) {
 	}
 
 	return newPullRequests, nil
-}
-
-func getSimpleRefName(reference *string) string {
-	return strings.Replace(*reference, "refs/heads/", "", 1)
 }
 
 // ListModifiedFiles in a pull request (not supported by V4 API).
@@ -193,28 +190,27 @@ func (m *AwsCodeCommitClient) GetPullRequest(prNumber, commitRef string) (*PullR
 			return nil, fmt.Errorf("failed to convert pull request id: '%s' to int: %s", prNumber, err)
 		}
 
-		//repository, err := m.CodeCommit.GetRepository(&codecommit.GetRepositoryInput{
-		//	RepositoryName: aws.String(m.Repository),
-		//})
-
 		return &PullRequest{
 			PullRequestObject: PullRequestObject{
-				ID:          prNumber,
-				Number:      pullRequestIdAsInt,
-				Title:       *pullRequest.PullRequest.Title,
-				URL:         fmt.Sprintf("https://eu-central-1.console.aws.amazon.com/codesuite/codecommit/repositories/%s/pull-requests/%s", m.Repository, prNumber),
-				BaseRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].DestinationReference),
-				HeadRefName: getSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].SourceReference),
+				Number: pullRequestIdAsInt,
+				Title:  *pullRequest.PullRequest.Title,
+				URL: fmt.Sprintf(
+					"https://%s.console.aws.amazon.com/codesuite/codecommit/repositories/%s/pull-requests/%s",
+					m.Region,
+					m.Repository,
+					prNumber,
+				),
+				BaseRefName: GetSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].DestinationReference),
+				HeadRefName: GetSimpleRefName(pullRequest.PullRequest.PullRequestTargets[0].SourceReference),
 				Repository: struct{ URL string }{
-					//TODO: get dynamic
-					URL: "codecommit::eu-central-1://" + m.Repository,
+					URL: fmt.Sprintf("codecommit::%s://%s", m.Region, m.Repository),
 				},
 			},
 			Tip: CommitObject{
 				ID:            *pullRequest.PullRequest.PullRequestTargets[0].SourceCommit,
 				CommittedDate: pullRequest.PullRequest.CreationDate,
 				Author:        *pullRequest.PullRequest.AuthorArn,
-				Message:       extractDescription(pullRequest),
+				Message:       ExtractDescription(pullRequest),
 			},
 		}, nil
 	}
@@ -277,7 +273,7 @@ func (m *AwsCodeCommitClient) DeletePreviousComments(prNumber string) error {
 	return nil
 }
 
-func parseRepository(s string) (string, string, error) {
+func ParseRepository(s string) (string, string, error) {
 	if strings.Contains(s, "codecommit::") {
 		s = strings.Replace(s, "codecommit::", "", -1)
 	}
@@ -291,10 +287,14 @@ func parseRepository(s string) (string, string, error) {
 	return parts[0], parts[1], nil
 }
 
-func extractDescription(pullRequest *codecommit.GetPullRequestOutput) string {
+func ExtractDescription(pullRequest *codecommit.GetPullRequestOutput) string {
 	if pullRequest.PullRequest.Description != nil {
 		return *pullRequest.PullRequest.Description
 	} else {
 		return ""
 	}
+}
+
+func GetSimpleRefName(reference *string) string {
+	return strings.Replace(*reference, "refs/heads/", "", 1)
 }

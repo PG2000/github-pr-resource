@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	resource "github.com/pg2000/codecommit-pr-resource"
 	"github.com/pg2000/codecommit-pr-resource/fakes"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGet(t *testing.T) {
@@ -320,7 +320,6 @@ func createTestPR(
 
 	return &resource.PullRequest{
 		PullRequestObject: resource.PullRequestObject{
-			ID:          fmt.Sprintf("pr%s", n),
 			Number:      count,
 			Title:       fmt.Sprintf("pr%s title", n),
 			URL:         fmt.Sprintf("pr%s url", n),

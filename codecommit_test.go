@@ -1,13 +1,14 @@
-package resource
+package resource_test
 
 import (
+	resource "github.com/pg2000/codecommit-pr-resource"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestParseRepository(t *testing.T) {
 	type args struct {
-		s string
+		repository string
 	}
 	tests := []struct {
 		name       string
@@ -18,13 +19,13 @@ func TestParseRepository(t *testing.T) {
 	}{
 		{
 			name:       "parse will return region and repository for eu-central-1",
-			args:       args{s: "codecommit::eu-central-1://devzone"},
+			args:       args{repository: "codecommit::eu-central-1://devzone"},
 			region:     "eu-central-1",
 			repository: "devzone",
 			wantErr:    false,
 		}, {
 			name:       "parse will return region and repository for us-west-1",
-			args:       args{s: "codecommit::us-west-1://test-repo"},
+			args:       args{repository: "codecommit::us-west-1://test-repo"},
 			region:     "us-west-1",
 			repository: "test-repo",
 			wantErr:    false,
@@ -32,7 +33,7 @@ func TestParseRepository(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			region, repository, err := parseRepository(tt.args.s)
+			region, repository, err := resource.ParseRepository(tt.args.repository)
 
 			if assert.NoError(t, err) {
 				assert.Equal(t, tt.region, region)
@@ -44,7 +45,7 @@ func TestParseRepository(t *testing.T) {
 
 func TestParseRepositoryFails(t *testing.T) {
 	type args struct {
-		s string
+		repository string
 	}
 	tests := []struct {
 		name       string
@@ -54,8 +55,8 @@ func TestParseRepositoryFails(t *testing.T) {
 		wantErr    bool
 	}{
 		{
-			name:       "will not accept a profile within the schema",
-			args:       args{s: "codecommit:11111111111:us-west-1://test-repo"},
+			name:       "will not accept an account in the repository url",
+			args:       args{repository: "codecommit:11111111111:us-west-1://test-repo"},
 			region:     "us-west-1",
 			repository: "test-repo",
 			wantErr:    true,
@@ -63,7 +64,7 @@ func TestParseRepositoryFails(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := parseRepository(tt.args.s)
+			_, _, err := resource.ParseRepository(tt.args.repository)
 			assert.Error(t, err)
 		})
 	}

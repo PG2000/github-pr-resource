@@ -29,8 +29,8 @@ type Git interface {
 // NewGitClient ...
 func NewGitClient(source *Source, dir string, output io.Writer) (*GitClient, error) {
 	return &GitClient{
-		Directory:   dir,
-		Output:      output,
+		Directory: dir,
+		Output:    output,
 	}, nil
 }
 
